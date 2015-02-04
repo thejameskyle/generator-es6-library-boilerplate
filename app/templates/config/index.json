@@ -1,0 +1,7 @@
+{
+  "destinationFolder": "dist",
+  "exportFileName": "<%= repo %>",
+  "entryFileName": "<%= repo %>",
+  "exportVarName": "<%= global %>",
+  "mochaGlobals": ["stub", "spy", "expect"]
+}
