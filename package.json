@@ -1,8 +1,8 @@
 {
   "name": "generator-es6-library-boilerplate",
   "version": "0.0.0",
-  "description": "Yeoman generator",
-  "license": "MIT",
+  "description": "Generator for es6-library-boilerplate.",
+  "license": "ISC",
   "main": "app/index.js",
   "repository": "thejameskyle/generator-es6-library-boilerplate",
   "author": {
@@ -20,7 +20,11 @@
     "app"
   ],
   "keywords": [
-    "yeoman-generator"
+    "yeoman-generator",
+    "6to5",
+    "es6",
+    "library",
+    "boilerplate"
   ],
   "dependencies": {
     "yeoman-generator": "^0.18.0",
