@@ -84,7 +84,7 @@ gulp.task('build', ['lint:src', 'clean'], function(done) {
   });
 });
 
-// Use 6to5 to build the library to CommonJS modules. This
+// Use babel to build the library to CommonJS modules. This
 // is fed to Browserify, which builds the version of the lib
 // for our browser spec runner.
 gulp.task('compile_browser_script', function() {
@@ -131,7 +131,7 @@ function test() {
 
 // Lint and run our tests
 gulp.task('test', ['lint:src', 'lint:test'], function() {
-  require('6to5/register')({ modules: 'common' });
+  require('babel/register')({ modules: 'common' });
   return test();
 });
 

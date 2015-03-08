@@ -22,6 +22,7 @@
   "keywords": [
     "yeoman-generator",
     "6to5",
+    "babel",
     "es6",
     "library",
     "boilerplate"
