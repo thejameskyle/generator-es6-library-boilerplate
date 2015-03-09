@@ -70,7 +70,7 @@ gulp.task('build', ['lint:src', 'clean'], function(done) {
     $.file(config.exportFileName + '.js', res.code, { src: true })
       .pipe($.plumber())
       .pipe($.sourcemaps.init({ loadMaps: true }))
-      .pipe($.to5({ blacklist: ['useStrict'] }))
+      .pipe($.babel({ blacklist: ['useStrict'] }))
       .pipe($.sourcemaps.write('./', {addComment: false}))
       .pipe(gulp.dest(config.destinationFolder))
       .pipe($.filter(['*', '!**/*.js.map']))
@@ -90,7 +90,7 @@ gulp.task('build', ['lint:src', 'clean'], function(done) {
 gulp.task('compile_browser_script', function() {
   return gulp.src(['src/**/*.js'])
     .pipe($.plumber())
-    .pipe($.to5({modules: 'common'}))
+    .pipe($.babel({modules: 'common'}))
     .pipe(gulp.dest('tmp'))
     .pipe($.filter([config.entryFileName + '.js']))
     .pipe($.rename('__entry.js'))
