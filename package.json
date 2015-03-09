@@ -1,6 +1,6 @@
 {
   "name": "generator-es6-library-boilerplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Generator for es6-library-boilerplate.",
   "license": "ISC",
   "main": "app/index.js",
