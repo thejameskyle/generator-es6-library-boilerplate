@@ -81,7 +81,8 @@ gulp.task('build', ['lint:src', 'clean'], function(done) {
       }))
       .pipe(gulp.dest(config.destinationFolder))
       .on('end', done);
-  });
+  })
+  .catch(done);
 });
 
 // Use babel to build the library to CommonJS modules. This
