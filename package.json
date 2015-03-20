@@ -28,8 +28,12 @@
     "boilerplate"
   ],
   "dependencies": {
-    "yeoman-generator": "^0.18.0",
     "chalk": "^0.5.0",
+    "fullname": "^1.1.0",
+    "git-config": "0.0.6",
+    "lodash.camelcase": "^3.0.1",
+    "npm": "*",
+    "yeoman-generator": "^0.18.0",
     "yosay": "^0.3.0"
   },
   "devDependencies": {
@@ -37,5 +41,6 @@
   },
   "peerDependencies": {
     "yo": ">=1.0.0"
-  }
+  },
+  "preferGlobal": true
 }
