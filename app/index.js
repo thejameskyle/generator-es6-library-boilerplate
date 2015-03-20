@@ -2,6 +2,9 @@
 var yeoman = require('yeoman-generator');
 var chalk = require('chalk');
 var yosay = require('yosay');
+var npm = require('npm');
+var gitConfig = require('git-config');
+var camelcase = require('lodash.camelcase');
 
 module.exports = yeoman.generators.Base.extend({
   initializing: function () {
@@ -16,35 +19,42 @@ module.exports = yeoman.generators.Base.extend({
       'Welcome to the super-duper ' + chalk.red('Es6LibraryBoilerplate') + ' generator!'
     ));
 
-    var prompts = [{
-      type: 'input',
-      name: 'user',
-      message: 'What is your github username/organization? (eg. thejameskyle)'
-    }, {
-      type: 'input',
-      name: 'repo',
-      message: 'What is your repo/projects name? (eg. my-module)'
-    }, {
-      type: 'input',
-      name: 'description',
-      message: 'What is a description of this project? (eg. A nice module.)'
-    }, {
-      type: 'input',
-      name: 'author',
-      message: 'Who is the author of this project? (eg. James Kyle <james@example.com>)'
-    }, {
-      type: 'input',
-      name: 'global',
-      message: 'What would you like the global to be (in browsers)? (eg. MyModule)'
-    }];
+    npm.load(function() {
+      var config = gitConfig.sync();
+      var prompts = [{
+        type: 'input',
+        name: 'user',
+        message: 'What is your github username/organization?',
+        default: npm.whoami()
+      }, {
+        type: 'input',
+        name: 'repo',
+        message: 'What is your repo/projects name?',
+        default: this.appname
+      }, {
+        type: 'input',
+        name: 'description',
+        message: 'What is a description of this project? (eg. A nice module.)'
+      }, {
+        type: 'input',
+        name: 'author',
+        message: 'Who is the author of this project?',
+        default: config.user.name + ' <' + config.user.email + '>'
+      }, {
+        type: 'input',
+        name: 'global',
+        message: 'What would you like the global to be (in browsers)?',
+        default: camelcase(this.appname)
+      }];
 
-    this.prompt(prompts, function (props) {
-      this.user = props.user;
-      this.repo = props.repo;
-      this.description = props.description;
-      this.author = props.author;
-      this.global = props.global;
-      done();
+      this.prompt(prompts, function (props) {
+        this.user = props.user;
+        this.repo = props.repo;
+        this.description = props.description;
+        this.author = props.author;
+        this.global = props.global;
+        done();
+      }.bind(this));
     }.bind(this));
   },
 
