@@ -5,6 +5,7 @@ var yosay = require('yosay');
 var npm = require('npm');
 var gitConfig = require('git-config');
 var camelcase = require('lodash.camelcase');
+var kebabcase = require('lodash.kebabcase');
 
 module.exports = yeoman.generators.Base.extend({
   initializing: function () {
@@ -30,7 +31,7 @@ module.exports = yeoman.generators.Base.extend({
         type: 'input',
         name: 'repo',
         message: 'What is your repo/projects name?',
-        default: this.appname
+        default: kebabcase(this.appname)
       }, {
         type: 'input',
         name: 'description',
