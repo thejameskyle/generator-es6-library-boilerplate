@@ -1,107 +1,101 @@
-var gulp = require('gulp');
-var $ = require('gulp-load-plugins')({
-  replaceString: /^gulp(-|\.)([0-9]+)?/
-});
+const gulp = require('gulp');
+const $ = require('gulp-load-plugins')();
 const fs = require('fs');
 const del = require('del');
+const glob = require('glob');
 const path = require('path');
+const mkdirp = require('mkdirp');
+const babelify = require('babelify');
 const isparta = require('isparta');
 const esperanto = require('esperanto');
 const browserify = require('browserify');
 const runSequence = require('run-sequence');
 const source = require('vinyl-source-stream');
 
-// Adjust this file to configure the build
-const config = require('./config');
+const manifest = require('./package.json');
+const mainFile = manifest.main;
+const destinationFolder = path.dirname(mainFile);
+const exportFileName = path.basename(mainFile, path.extname(mainFile));
 
 // Remove the built files
 gulp.task('clean', function(cb) {
-  del([config.destinationFolder], cb);
+  del([destinationFolder], cb);
 });
 
 // Remove our temporary files
-gulp.task('clean:tmp', function(cb) {
+gulp.task('clean-tmp', function(cb) {
   del(['tmp'], cb);
 });
 
-// Send a notification when JSHint fails,
+// Send a notification when JSRC fails,
 // so that you know your changes didn't build
-function ding(file) {
-  return file.jshint.success ? false : 'JSHint failed';
-};
+function jscsNotify(file) {
+  if (!file.jscs) { return; }
+  return file.jscs.success ? false : 'JSRC failed';
+}
+
+function createLintTask(taskName, files) {
+  gulp.task(taskName, function() {
+    return gulp.src(files)
+      .pipe($.plumber())
+      .pipe($.eslint())
+      .pipe($.eslint.format())
+      .pipe($.eslint.failOnError())
+      .pipe($.jscs())
+      .pipe($.notify(jscsNotify));
+  });
+}
 
 // Lint our source code
-gulp.task('lint:src', function() {
-  return gulp.src(['src/**/*.js'])
-    .pipe($.plumber())
-    .pipe($.jshint())
-    .pipe($.jshint.reporter('jshint-stylish'))
-    .pipe($.notify(ding))
-    .pipe($.jshint.reporter('fail'));
-});
+createLintTask('lint-src', ['src/**/*.js']);
 
 // Lint our test code
-gulp.task('lint:test', function() {
-  return gulp.src(['test/unit/**/*.js'])
-    .pipe($.plumber())
-    .pipe($.jshint())
-    .pipe($.jshint.reporter('jshint-stylish'))
-    .pipe($.notify(ding))
-    .pipe($.jshint.reporter('fail'));
-});
+createLintTask('lint-test', ['test/**/*.js']);
 
 // Build two versions of the library
-gulp.task('build', ['lint:src', 'clean'], function(done) {
+gulp.task('build', ['lint-src', 'clean'], function(done) {
   esperanto.bundle({
     base: 'src',
-    entry: config.entryFileName,
+    entry: '<%= repo %>.js',
   }).then(function(bundle) {
-    let res = bundle.toUmd({
+    var res = bundle.toUmd({
       sourceMap: true,
-      sourceMapSource: config.entryFileName + '.js',
-      sourceMapFile: config.exportFileName + '.js',
-      name: config.exportVarName
+      sourceMapSource: '<%= repo %>.js',
+      sourceMapFile: exportFileName + '.js',
+      name: '<%= global %>'
     });
 
     // Write the generated sourcemap
-    fs.mkdirSync(config.destinationFolder);
-    fs.writeFileSync(path.join(config.destinationFolder, config.exportFileName + '.js'), res.map.toString());
+    mkdirp.sync(destinationFolder);
+    fs.writeFileSync(path.join(destinationFolder, exportFileName + '.js'), res.map.toString());
 
-    $.file(config.exportFileName + '.js', res.code, { src: true })
+    $.file(exportFileName + '.js', res.code, { src: true })
       .pipe($.plumber())
       .pipe($.sourcemaps.init({ loadMaps: true }))
       .pipe($.babel({ blacklist: ['useStrict'] }))
       .pipe($.sourcemaps.write('./', {addComment: false}))
-      .pipe(gulp.dest(config.destinationFolder))
+      .pipe(gulp.dest(destinationFolder))
       .pipe($.filter(['*', '!**/*.js.map']))
-      .pipe($.rename(config.exportFileName + '.min.js'))
-      .pipe($.uglifyjs({
-        outSourceMap: true,
-        inSourceMap: config.destinationFolder + '/' + config.exportFileName + '.js.map',
-      }))
-      .pipe(gulp.dest(config.destinationFolder))
+      .pipe($.rename(exportFileName + '.min.js'))
+      .pipe($.sourcemaps.init({ loadMaps: true }))
+      .pipe($.uglify())
+      .pipe($.sourcemaps.write('./'))
+      .pipe(gulp.dest(destinationFolder))
       .on('end', done);
   })
   .catch(done);
 });
 
-// Use babel to build the library to CommonJS modules. This
-// is fed to Browserify, which builds the version of the lib
-// for our browser spec runner.
-gulp.task('compile_browser_script', function() {
-  return gulp.src(['src/**/*.js'])
-    .pipe($.plumber())
-    .pipe($.babel({modules: 'common'}))
-    .pipe(gulp.dest('tmp'))
-    .pipe($.filter([config.entryFileName + '.js']))
-    .pipe($.rename('__entry.js'))
-    .pipe(gulp.dest('tmp'));
-});
-
 // Bundle our app for our unit tests
-gulp.task('browserify', ['compile_browser_script'], function() {
-  var bundleStream = browserify(['./test/setup/browserify.js']).bundle();
-  return bundleStream
+gulp.task('browserify', function() {
+  var testFiles = glob.sync('./test/unit/**/*');
+  var allFiles = ['./test/setup/browserify.js'].concat(testFiles);
+  var bundler = browserify(allFiles);
+  bundler.transform(babelify.configure({
+    sourceMapRelative: __dirname + '/src',
+    blacklist: ['useStrict']
+  }));
+  return bundler.bundle()
     .on('error', function(err){
       console.log(err.message);
       this.emit('end');
@@ -112,9 +106,14 @@ gulp.task('browserify', ['compile_browser_script'], function() {
     .pipe($.livereload());
 });
 
-gulp.task('coverage', function(done) {
-  gulp.src(['src/*.js'])
-    .pipe($.plumber())
+function test() {
+  return gulp.src(['test/setup/node.js', 'test/unit/**/*.js'], {read: false})
+    .pipe($.mocha({reporter: 'dot', globals: ['stub', 'spy', 'expect']}));
+}
+
+gulp.task('coverage', ['lint-src', 'lint-test'], function(done) {
+  require('babel/register');
+  gulp.src(['src/**/*.js'])
     .pipe($.istanbul({ instrumenter: isparta.Instrumenter }))
     .pipe($.istanbul.hookRequire())
     .on('finish', function() {
@@ -124,28 +123,29 @@ gulp.task('coverage', function(done) {
     });
 });
 
-function test() {
-  return gulp.src(['test/setup/node.js', 'test/unit/**/*.js'], {read: false})
-    .pipe($.plumber())
-    .pipe($.mocha({reporter: 'dot', globals: config.mochaGlobals}));
-};
-
 // Lint and run our tests
-gulp.task('test', ['lint:src', 'lint:test'], function() {
-  require('babel/register')({ modules: 'common' });
+gulp.task('test', ['lint-src', 'lint-test'], function() {
+  require('babel/register');
   return test();
 });
 
 // Ensure that linting occurs before browserify runs. This prevents
 // the build from breaking due to poorly formatted code.
-gulp.task('build_in_sequence', function(callback) {
-  runSequence(['lint:src', 'lint:test'], 'browserify', callback);
+gulp.task('build-in-sequence', function(callback) {
+  runSequence(['lint-src', 'lint-test'], 'browserify', callback);
+});
+
+const watchFiles = ['src/**/*', 'test/**/*', 'package.json', '**/.eslintrc', '.jscsrc'];
+
+// Run the headless unit tests as you make changes.
+gulp.task('watch', function() {
+  gulp.watch(watchFiles, ['test']);
 });
 
 // Set up a livereload environment for our spec runner
-gulp.task('test:browser', ['build_in_sequence'], function() {
+gulp.task('test-browser', ['build-in-sequence'], function() {
   $.livereload.listen({port: 35729, host: 'localhost', start: true});
-  return gulp.watch(['src/**/*.js', 'test/**/*', '.jshintrc', 'test/.jshintrc', 'config/index.json'], ['build_in_sequence']);
+  return gulp.watch(watchFiles, ['build-in-sequence']);
 });
 
 // An alias of test
