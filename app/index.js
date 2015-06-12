@@ -6,6 +6,8 @@ var npm = require('npm');
 var gitConfig = require('git-config');
 var camelcase = require('lodash.camelcase');
 var kebabcase = require('lodash.kebabcase');
+var fs = require('fs');
+var path = require('path');
 
 module.exports = yeoman.generators.Base.extend({
   initializing: function () {
@@ -60,26 +62,15 @@ module.exports = yeoman.generators.Base.extend({
   },
 
   writing: {
-    app: function () {
-      this.template('jshintrc', '.jshintrc');
-      this.template('travis.yml', '.travis.yml');
-      this.template('_package.json', 'package.json');
-      this.template('LICENSE.md', 'LICENSE.md');
-      this.template('README.md', 'README.md');
-      this.template('gulpfile.js', 'gulpfile.js');
-      this.mkdir('config');
-      this.template('config/index.json', 'config/index.json');
-      this.mkdir('src');
-      this.template('src/index.js', 'src/' + this.repo + '.js');
-      this.mkdir('test');
-      this.template('test/jshintrc', 'test/.jshintrc');
-      this.template('test/runner.html', 'test/runner.html');
-      this.mkdir('test/setup');
-      this.template('test/setup/browserify.js', 'test/setup/browserify.js');
-      this.template('test/setup/node.js', 'test/setup/node.js');
-      this.template('test/setup/setup.js', 'test/setup/setup.js');
-      this.mkdir('test/unit');
-      this.template('test/unit/index.js', 'test/unit/' + this.repo + '.js');
+    app: function() {
+      var root = this.sourceRoot();
+      fs.readdirSync(root).forEach(function(p) {
+        if (fs.lstatSync(path.join(root, p)).isFile()) {
+          this.template(p, p);
+        }
+      }, this);
+      this.directory('test');
+      this.directory('src');
     }
   },
 
